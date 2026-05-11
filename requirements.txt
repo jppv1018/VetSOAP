@@ -1,0 +1,8 @@
+django==4.2.13
+spyne==2.14.0
+lxml==5.2.2
+gunicorn==21.2.0
+dj-database-url==2.1.0
+whitenoise==6.6.0
+psycopg2-binary==2.9.9
+python-dotenv==1.0.1

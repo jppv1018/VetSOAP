@@ -1,0 +1,154 @@
+{% extends 'vet/base.html' %}
+{% block content %}
+<h2><i class="bi bi-bar-chart-line"></i> Informe XML</h2>
+
+<!-- Resumen -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <i class="bi bi-cash-stack fs-2 text-success"></i>
+      <h6 class="mt-2 text-muted">Ingresos Totales</h6>
+      <h3 class="fw-bold text-success">${{ resumen.total_ingresos|default:"0" }}</h3>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <i class="bi bi-heart-fill fs-2 text-danger"></i>
+      <h6 class="mt-2 text-muted">Total Mascotas</h6>
+      <h3 class="fw-bold text-danger">{{ resumen.total_mascotas|default:"0" }}</h3>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <i class="bi bi-clipboard2-pulse-fill fs-2 text-primary"></i>
+      <h6 class="mt-2 text-muted">Total Consultas</h6>
+      <h3 class="fw-bold text-primary">{{ resumen.total_consultas|default:"0" }}</h3>
+    </div>
+  </div>
+</div>
+
+<!-- Porcentaje por especie -->
+<div class="card mb-4 p-4">
+  <h5><i class="bi bi-pie-chart"></i> Distribución por Especie
+  </h5>
+  <div id="xslt-output">
+    <p class="text-muted">Cargando...</p>
+  </div>
+</div>
+
+<!-- Árbol XML con D3 -->
+<div class="card mb-4 p-4">
+  <h5><i class="bi bi-diagram-3"></i> Árbol XML (estructura de nodos)</h5>
+  <div id="tree-container" style="overflow-x:auto;"></div>
+</div>
+
+<!-- XML raw -->
+<div class="card p-4">
+  <h5><i class="bi bi-code-slash"></i> XML Raw</h5>
+  <details>
+    <summary class="btn btn-sm btn-outline-secondary mb-2">Ver / Ocultar XML</summary>
+    <pre style="background:#1e1e1e;color:#d4d4d4;padding:16px;border-radius:8px;font-size:.78rem;max-height:400px;overflow:auto;">{{ xml_text }}</pre>
+  </details>
+</div>
+
+
+<textarea id="xml-data" style="display:none">{{ xml_text }}</textarea>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script>
+// ── XSLT: distribución por especie ────────────────────────────────────────────
+(function() {
+  var xmlStr = document.getElementById("xml-data").value;
+  var parser = new DOMParser();
+  var xmlDoc = parser.parseFromString(xmlStr, 'application/xml');
+
+  // XSL
+  var xsl = '<?xml version="1.0" encoding="UTF-8"?>'
+    + '<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">'
+    + '<xsl:output method="html"/>'
+    + '<xsl:template match="/">'
+    +   '<div class="mt-3">'
+    +   '<xsl:for-each select="//resumen/especies/especie">'
+    +     '<div class="mb-2">'
+    +       '<div class="d-flex justify-content-between">'
+    +         '<span><xsl:value-of select="@nombre"/></span>'
+    +         '<strong><xsl:value-of select="@porcentaje"/>%'
+    +           ' (<xsl:value-of select="@cantidad"/> mascota(s))'
+    +         '</strong>'
+    +       '</div>'
+    +       '<div class="progress" style="height:10px">'
+    +         '<div class="progress-bar" role="progressbar">'
+    +           '<xsl:attribute name="style">'
+    +             '<xsl:text>width:</xsl:text>'
+    +             '<xsl:value-of select="@porcentaje"/>'
+    +             '<xsl:text>%</xsl:text>'
+    +           '</xsl:attribute>'
+    +           '<xsl:attribute name="aria-valuenow"><xsl:value-of select="@porcentaje"/></xsl:attribute>'
+    +         '</div>'
+    +       '</div>'
+    +     '</div>'
+    +   '</xsl:for-each>'
+    +   '</div>'
+    + '</xsl:template>'
+    + '</xsl:stylesheet>';
+
+  var xslDoc = parser.parseFromString(xsl, 'application/xml');
+  var proc   = new XSLTProcessor();
+  proc.importStylesheet(xslDoc);
+  var frag = proc.transformToFragment(xmlDoc, document);
+  var out  = document.getElementById('xslt-output');
+  out.innerHTML = '';
+  out.appendChild(frag);
+})();
+
+// ── Árbol D3 ──────────────────────────────────────────────────────────────────
+const treeData = {{ tree_json|safe }};
+
+function countLeaves(d) {
+  if (!d.children || d.children.length === 0) return 1;
+  return d.children.reduce((s,c) => s + countLeaves(c), 0);
+}
+const width = 900, nodeHeight = 34;
+const height = Math.max(400, countLeaves(treeData) * nodeHeight);
+
+const svg = d3.select('#tree-container')
+  .append('svg')
+  .attr('width', width)
+  .attr('height', height)
+  .append('g')
+  .attr('transform', 'translate(120,20)');
+
+const root = d3.hierarchy(treeData, d => d.children);
+const treeLayout = d3.tree().size([height - 40, width - 220]);
+treeLayout(root);
+
+svg.selectAll('.link')
+  .data(root.links())
+  .join('path')
+  .attr('fill','none')
+  .attr('stroke','#adb5bd')
+  .attr('stroke-width', 1.5)
+  .attr('d', d3.linkHorizontal()
+    .x(d => d.y)
+    .y(d => d.x));
+
+const node = svg.selectAll('.node')
+  .data(root.descendants())
+  .join('g')
+  .attr('transform', d => `translate(${d.y},${d.x})`);
+
+node.append('circle')
+  .attr('r', 6)
+  .attr('fill', d => d.children ? '#0d6efd' : '#6610f2')
+  .attr('stroke','#fff')
+  .attr('stroke-width', 2);
+
+node.append('text')
+  .attr('dy', '0.32em')
+  .attr('x', d => d.children ? -10 : 10)
+  .attr('text-anchor', d => d.children ? 'end' : 'start')
+  .style('font-size','12px')
+  .style('font-family','monospace')
+  .style('fill','#212529')
+  .text(d => d.data.name);
+</script>
+{% endblock %}

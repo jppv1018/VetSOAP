@@ -1,0 +1,90 @@
+{% extends 'vet/base.html' %}
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-clipboard2-pulse"></i> Gestión de Consultas</h2>
+
+<div class="card p-4 mb-4">
+  <h5 class="mb-3">{% if editar %}<i class="bi bi-pencil-square text-warning"></i> Editar Consulta{% else %}<i class="bi bi-plus-circle text-primary"></i> Nueva Consulta{% endif %}</h5>
+  <form method="post" action="{% if editar %}/consultas/editar/{{ editar.id }}/{% else %}/consultas/crear/{% endif %}">
+    {% csrf_token %}
+    <div class="row g-3">
+      <div class="col-md-4">
+        <select name="mascota_id" class="form-select" required>
+          <option value="">Mascota...</option>
+          {% for m in mascotas %}
+            <option value="{{ m.id }}"
+              {% if editar and editar.mascota_id == m.id %}selected{% endif %}>
+              {{ m.nombre }} ({{ m.especie }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <input name="fecha" type="date" class="form-control"
+               value="{{ editar.fecha|default:'' }}" required>
+      </div>
+      <div class="col-md-4">
+        <input name="veterinario" class="form-control" placeholder="Veterinario"
+               value="{{ editar.veterinario|default:'' }}" required>
+      </div>
+      <div class="col-md-8">
+        <textarea name="diagnostico" class="form-control" placeholder="Diagnóstico" rows="2" required>{{ editar.diagnostico|default:'' }}</textarea>
+      </div>
+      <div class="col-md-4">
+        <input name="costo" type="number" step="0.01" min="0" class="form-control"
+               placeholder="Costo ($)" value="{{ editar.costo|default:'' }}" required>
+        <div class="d-flex gap-2 mt-2">
+          <button class="btn btn-primary flex-grow-1" type="submit">
+            <i class="bi bi-save"></i> {% if editar %}Actualizar{% else %}Guardar{% endif %}
+          </button>
+          {% if editar %}
+            <a href="/consultas/" class="btn btn-secondary">
+              <i class="bi bi-x-circle"></i> Cancelar
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center rounded-top">
+    <span><i class="bi bi-table"></i> Lista de Consultas</span>
+    <span class="badge bg-secondary">{{ consultas|length }} registro(s)</span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th>#</th><th>Mascota</th><th>Fecha</th><th>Diagnóstico</th><th>Costo</th><th>Veterinario</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in consultas %}
+        <tr>
+          <td class="text-muted">{{ c.id }}</td>
+          <td><strong>{{ c.mascota.nombre }}</strong></td>
+          <td>{{ c.fecha }}</td>
+          <td>{{ c.diagnostico|truncatechars:50 }}</td>
+          <td class="text-success fw-semibold">${{ c.costo }}</td>
+          <td>{{ c.veterinario }}</td>
+          <td>
+            <a href="/consultas/editar/{{ c.id }}/" class="btn btn-sm btn-warning me-1" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <a href="/consultas/eliminar/{{ c.id }}/" class="btn btn-sm btn-danger" title="Eliminar"
+               onclick="return confirm('¿Eliminar esta consulta?')">
+              <i class="bi bi-trash"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">
+          <i class="bi bi-inbox fs-3 d-block mb-2"></i>Sin consultas registradas.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

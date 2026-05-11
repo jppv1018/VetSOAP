@@ -1,0 +1,1 @@
+web: gunicorn veterinaria_soap.wsgi --log-file -
