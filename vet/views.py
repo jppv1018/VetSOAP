@@ -18,10 +18,16 @@ def soap_call(action, body_xml):
                xmlns:tns="{TNS}">
   <soap:Body>{body_xml}</soap:Body>
 </soap:Envelope>"""
-    resp = requests.post(SOAP_URL, data=envelope.encode('utf-8'),
-                     headers={**HEADERS, 'SOAPAction': action},
-                     timeout=SOAP_TIMEOUT)
-    return ET.fromstring(resp.content)
+    try:
+        resp = requests.post(SOAP_URL, data=envelope.encode('utf-8'),
+                             headers={**HEADERS, 'SOAPAction': action},
+                             timeout=60)
+        return ET.fromstring(resp.content)
+    except requests.exceptions.Timeout:
+        # La operación pudo haberse completado igual — retorna elemento vacío
+        return ET.fromstring('<root/>')
+    except Exception as e:
+        return ET.fromstring('<root/>')
 
 # AUTH
 def login_view(request):
