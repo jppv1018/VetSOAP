@@ -1,5 +1,5 @@
 django==4.2.13
-spyne==2.14.0
+spyne==2.13.16
 lxml==5.2.2
 gunicorn==21.2.0
 dj-database-url==2.1.0
