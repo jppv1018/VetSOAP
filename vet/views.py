@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from .models import Dueno, Mascota, Consulta
 import os 
 SOAP_URL = os.environ.get('SOAP_URL', 'http://localhost:8000/soap/')
+SOAP_TIMEOUT = int(os.environ.get('SOAP_TIMEOUT', '30'))
 HEADERS  = {'Content-Type': 'text/xml; charset=utf-8'}
 TNS      = 'veterinaria.soap'
 
@@ -18,7 +19,8 @@ def soap_call(action, body_xml):
   <soap:Body>{body_xml}</soap:Body>
 </soap:Envelope>"""
     resp = requests.post(SOAP_URL, data=envelope.encode('utf-8'),
-                         headers={**HEADERS, 'SOAPAction': action}, timeout=10)
+                     headers={**HEADERS, 'SOAPAction': action},
+                     timeout=SOAP_TIMEOUT)
     return ET.fromstring(resp.content)
 
 # AUTH
